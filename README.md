@@ -27,7 +27,7 @@ This implements [x402](https://x402.org) for Radix, making Radix a first-class c
 ## Quick Start
 
 ```bash
-git clone https://github.com/AscendedHobo/x402-radix.git
+git clone https://github.com/quackstra/x402-radix.git
 cd x402-radix
 pnpm install && pnpm build
 cp .env.example .env  # Edit with your Stokenet keys
