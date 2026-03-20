@@ -8,10 +8,12 @@
     "build": "pnpm -r build",
     "clean": "pnpm -r clean",
     "dev:facilitator": "pnpm --filter @x402/radix-facilitator dev",
-    "typecheck": "pnpm -r exec tsc --noEmit",
+    "typecheck": "pnpm -r --filter '!@x402/radix-wasm' exec tsc --noEmit",
+    "test:e2e": "tsx scripts/e2e-stokenet.ts",
     "build:wasm": "cd crates/x402-radix-wasm && cargo build --target wasm32-unknown-unknown --release && wasm-bindgen --target nodejs --out-dir ../../packages/wasm/dist target/wasm32-unknown-unknown/release/x402_radix_wasm.wasm"
   },
   "devDependencies": {
+    "tsx": "^4.19.0",
     "typescript": "^5.7.0"
   },
   "engines": {
