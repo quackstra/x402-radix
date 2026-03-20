@@ -1,0 +1,16 @@
+{
+  "name": "x402-radix",
+  "version": "0.1.0",
+  "private": true,
+  "description": "x402 payment protocol for Radix DLT — AI agents pay with XRD",
+  "license": "MIT",
+  "scripts": {
+    "build": "pnpm -r build",
+    "clean": "pnpm -r clean",
+    "dev:facilitator": "pnpm --filter @x402/radix-facilitator dev",
+    "typecheck": "pnpm -r exec tsc --noEmit"
+  },
+  "devDependencies": { "typescript": "^5.7.0" },
+  "engines": { "node": ">=22.0.0", "pnpm": ">=9.0.0" },
+  "packageManager": "pnpm@9.15.0"
+}
