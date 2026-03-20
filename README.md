@@ -52,7 +52,7 @@ See [specs/scheme_exact_radix.md](./specs/scheme_exact_radix.md) for the canonic
 
 ## Contributing
 
-Community project from the Radix ecosystem, coordinated via [Radical Vibes](https://t.me/radicalvibes).
+Community project from the Radix ecosystem, coordinated via [Radical Vibes](https://t.me/RadicalVibing).
 
 ## License
 
