@@ -1,5 +1,9 @@
 node_modules/
-dist/
+packages/core/dist/
+packages/client/dist/
+packages/server/dist/
+packages/facilitator/dist/
 .env
 *.tgz
 .turbo/
+crates/*/target/

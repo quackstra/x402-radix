@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@x402/radix-core": "workspace:*",
-    "@x402/radix-server": "workspace:*"
+    "@x402/radix-server": "workspace:*",
+    "@x402/radix-wasm": "workspace:*"
   },
   "devDependencies": { "@types/node": "^22.0.0", "tsup": "^8.0.0", "typescript": "^5.7.0", "tsx": "^4.0.0" }
 }

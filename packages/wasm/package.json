@@ -1,0 +1,18 @@
+{
+  "name": "@x402/radix-wasm",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/x402_radix_wasm.js",
+  "types": "dist/x402_radix_wasm.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/x402_radix_wasm.d.ts",
+      "import": "./dist/x402_radix_wasm.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "echo 'WASM pre-built — run build:wasm from repo root to rebuild'",
+    "clean": "rm -rf dist"
+  }
+}

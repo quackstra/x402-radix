@@ -1,4 +1,5 @@
 import { FacilitatorConfig, RadixPaymentRequirements, RadixSettlementResponse } from "@x402/radix-core";
+import { wrap_subintent_in_root_transaction } from "@x402/radix-wasm";
 import { GasBudgetTracker } from "./gas-budget.js";
 
 /**
@@ -10,30 +11,39 @@ export async function settleSponsored(
   config: FacilitatorConfig,
   gasBudget: GasBudgetTracker,
 ): Promise<RadixSettlementResponse> {
-  const _rootManifest = buildRootManifest(
+  const rootManifest = buildRootManifest(
     config.feePayerAccount,
     requirements.payTo,
     config.maxGasPerRequestXrd,
   );
 
-  // TODO: Requires V2 transaction builder (see SPEC-toolkit-strategy.md)
-  //
-  // The composed transaction structure:
-  //   NotarizedTransactionV2:
-  //     SignedTransactionIntentV2:
-  //       TransactionIntentV2:
-  //         root_intent_core:
-  //           header: TransactionHeaderV2
-  //             - notary_public_key: facilitator's Ed25519 pubkey
-  //             - notary_is_signatory: true  <-- CRITICAL
-  //           manifest: rootManifest (compiled)
-  //         non_root_subintents: [agent's subintent from SignedPartialTransactionV2]
-  //       root_intent_signatures: [] (notary_is_signatory covers this)
-  //       non_root_subintent_signatures: [agent's signatures]
-  //     notary_signature: facilitator signs the TransactionIntentHash
+  // Get current epoch from Gateway for transaction validity window
+  const currentEpoch = await getCurrentEpoch(config.gatewayBaseUrl);
+  const startEpoch = currentEpoch;
+  const endEpoch = currentEpoch + 100; // ~50 min validity window
+
+  // Compose the NotarizedTransactionV2 via WASM
+  const wrapResult = JSON.parse(
+    wrap_subintent_in_root_transaction(
+      JSON.stringify({
+        signed_partial_tx_hex: _agentTxHex,
+        root_manifest_string: rootManifest,
+        network_id: config.networkId,
+        notary_private_key_hex: config.notaryPrivateKeyHex,
+        start_epoch: startEpoch,
+        end_epoch: endEpoch,
+      }),
+    ),
+  ) as { success: boolean; data?: string; error?: string };
+
+  if (!wrapResult.success || !wrapResult.data) {
+    return { success: false, network: config.network, errorReason: `Compose: ${wrapResult.error ?? "unknown"}` };
+  }
+
+  const composedTxHex = wrapResult.data;
 
   // Preview
-  const preview = await previewTransaction(config.gatewayBaseUrl, "TODO_composed_tx_hex");
+  const preview = await previewTransaction(config.gatewayBaseUrl, composedTxHex);
   if (!preview.success) {
     return { success: false, network: config.network, errorReason: `Preview: ${preview.error}` };
   }
@@ -45,7 +55,7 @@ export async function settleSponsored(
   }
 
   // Submit
-  const txId = await submitTransaction(config.gatewayBaseUrl, "TODO_composed_tx_hex");
+  const txId = await submitTransaction(config.gatewayBaseUrl, composedTxHex);
   if (!txId) {
     return { success: false, network: config.network, errorReason: "Submission failed" };
   }
@@ -102,6 +112,22 @@ CALL_METHOD
     Expression("ENTIRE_WORKTOP")
     None
 ;`.trim();
+}
+
+async function getCurrentEpoch(gatewayUrl: string): Promise<number> {
+  try {
+    const resp = await fetch(`${gatewayUrl}/status/gateway-status`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    if (resp.ok) {
+      const data = await resp.json() as Record<string, unknown>;
+      const ledgerState = data.ledger_state as Record<string, unknown> | undefined;
+      if (ledgerState?.epoch) return Number(ledgerState.epoch);
+    }
+  } catch { /* fall through to default */ }
+  throw new Error("Failed to fetch current epoch from Gateway");
 }
 
 async function previewTransaction(gatewayUrl: string, _txHex: string): Promise<{

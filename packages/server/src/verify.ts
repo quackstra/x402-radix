@@ -5,6 +5,10 @@ import {
   CONSTRUCTION_TOLERANCE_SECONDS, REPLAY_RETENTION_BUFFER_SECONDS,
   networkIdFromCaip2,
 } from "@x402/radix-core";
+import {
+  decompile_signed_partial_transaction,
+  decompile_notarized_transaction_v2,
+} from "@x402/radix-wasm";
 
 export interface ReplayStore {
   isReplay(hash: string): boolean;
@@ -156,12 +160,31 @@ interface IntentHeader {
   maxProposerTimestamp: number | null;
 }
 
-// TODO implementations (require Radix Engine Toolkit)
+// WASM-backed decompilation helpers
 
-async function decompileManifest(_txHex: string, _networkId: number, _mode: string): Promise<string> {
-  // TODO: Hex-decode -> deserialize as SignedPartialTransactionV2 (sponsored)
-  //       or NotarizedTransactionV2 (nonSponsored) -> extract manifest -> decompile to string
-  throw new Error("Not implemented — requires Radix Engine Toolkit V2 deserialization");
+interface DecompileResult {
+  manifest: string;
+  network_id: number;
+  intent_discriminator: string;
+  start_epoch: number;
+  end_epoch: number;
+  max_proposer_timestamp_secs: number | null;
+  min_proposer_timestamp_secs: number | null;
+}
+
+function callDecompile(txHex: string, networkId: number, mode: string): DecompileResult {
+  const inputJson = JSON.stringify({ tx_hex: txHex, network_id: networkId });
+  const rawResult = mode === "sponsored"
+    ? decompile_signed_partial_transaction(inputJson)
+    : decompile_notarized_transaction_v2(inputJson);
+  const parsed = JSON.parse(rawResult);
+  if (parsed.error) throw new Error(parsed.error);
+  return parsed.data as DecompileResult;
+}
+
+async function decompileManifest(txHex: string, networkId: number, mode: string): Promise<string> {
+  const result = callDecompile(txHex, networkId, mode);
+  return result.manifest;
 }
 
 function parseInstructions(manifest: string): ParsedInstruction[] {
@@ -196,13 +219,25 @@ function extractDecimal(inst: ParsedInstruction): string {
   return m ? m[1] : "";
 }
 
-async function extractIntentHeader(_txHex: string, _networkId: number, _mode: string): Promise<IntentHeader | null> {
-  // TODO: Deserialize and extract IntentHeaderV2 from the subintent/transaction
-  return null;
+async function extractIntentHeader(txHex: string, networkId: number, mode: string): Promise<IntentHeader | null> {
+  try {
+    const result = callDecompile(txHex, networkId, mode);
+    return {
+      networkId: result.network_id,
+      intentDiscriminator: result.intent_discriminator,
+      startEpochInclusive: result.start_epoch,
+      endEpochExclusive: result.end_epoch,
+      minProposerTimestamp: result.min_proposer_timestamp_secs,
+      maxProposerTimestamp: result.max_proposer_timestamp_secs,
+    };
+  } catch {
+    return null;
+  }
 }
 
 async function computeIntentHash(txHex: string, _networkId: number, _mode: string): Promise<string> {
-  // TODO: Compute SubintentHash (sponsored) or TransactionIntentHash (non-sponsored)
+  // TODO: Use WASM to compute SubintentHash (sponsored) or TransactionIntentHash (non-sponsored).
+  // The WASM module doesn't expose hash computation separately yet — using hex prefix as placeholder.
   return txHex.slice(0, 64);
 }
 

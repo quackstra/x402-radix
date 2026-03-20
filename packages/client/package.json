@@ -6,6 +6,6 @@
   "types": "dist/index.d.ts",
   "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
   "scripts": { "build": "tsup src/index.ts --format esm --dts", "clean": "rm -rf dist" },
-  "dependencies": { "@x402/radix-core": "workspace:*" },
+  "dependencies": { "@x402/radix-core": "workspace:*", "@x402/radix-wasm": "workspace:*" },
   "devDependencies": { "tsup": "^8.0.0", "typescript": "^5.7.0" }
 }
