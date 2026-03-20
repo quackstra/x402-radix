@@ -355,6 +355,35 @@ pub fn wrap_subintent_in_root_tx(input: WrapInput) -> Result<String, String> {
     Ok(hex::encode(payload_bytes.as_slice()))
 }
 
+/// Compute the intent hash of a NotarizedTransactionV2 (hex-encoded SBOR).
+/// Returns the bech32m-encoded transaction intent hash for Gateway polling.
+pub fn hash_notarized_tx_v2(input: DecompileInput) -> Result<String, String> {
+    let bytes = hex::decode(&input.tx_hex).map_err(|e| format!("Invalid hex: {e}"))?;
+
+    let notarized = NotarizedTransactionV2::from_raw(&bytes.into())
+        .map_err(|e| format!("Decode failed: {e:?}"))?;
+
+    let network_id = notarized
+        .signed_transaction_intent
+        .transaction_intent
+        .root_intent_core
+        .header
+        .network_id;
+
+    let prepared = notarized
+        .prepare(&PreparationSettings::latest())
+        .map_err(|e| format!("Preparation failed: {e:?}"))?;
+
+    let intent_hash = prepared.transaction_intent_hash();
+    let nd = network_definition(network_id);
+    let encoder = TransactionHashBech32Encoder::new(&nd);
+    let bech32m = encoder
+        .encode(&intent_hash)
+        .map_err(|e| format!("Bech32m encode failed: {e:?}"))?;
+
+    Ok(bech32m)
+}
+
 /// Decompile a SignedPartialTransactionV2 from hex.
 pub fn decompile_signed_partial_tx(input: DecompileInput) -> Result<String, String> {
     let bytes = hex::decode(&input.tx_hex).map_err(|e| format!("Invalid hex: {e}"))?;

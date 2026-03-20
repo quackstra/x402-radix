@@ -43,6 +43,14 @@ export function decompile_notarized_transaction_v2(input_json: string): string;
 export function decompile_signed_partial_transaction(input_json: string): string;
 
 /**
+ * Compute the intent hash of a NotarizedTransactionV2 (hex-encoded SBOR).
+ * Returns the bech32m-encoded intent hash used for polling transaction status.
+ *
+ * Returns JSON: { success: bool, data?: intent_hash_bech32m, error?: string }
+ */
+export function hash_notarized_transaction_v2(input_json: string): string;
+
+/**
  * Wrap a SignedPartialTransactionV2 (hex) in a root NotarizedTransactionV2.
  * Used by the facilitator to compose the final settlement transaction.
  *

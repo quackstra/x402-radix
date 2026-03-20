@@ -4,7 +4,7 @@ import { verifyRadixPayment } from "@x402/radix-server";
 import { loadConfig } from "./config.js";
 import { GasBudgetTracker } from "./gas-budget.js";
 import { InMemoryReplayStore } from "./replay-store.js";
-import { settleSponsored, settleNonSponsored } from "./settle.js";
+import { settleSponsored, settleNonSponsored, getCurrentEpoch } from "./settle.js";
 
 const config = loadConfig();
 const replayStore = new InMemoryReplayStore();
@@ -35,9 +35,8 @@ const server = http.createServer(async (req, res) => {
         requirements: RadixPaymentRequirements;
       };
 
-      // TODO: Fetch current proposer timestamp and epoch from Gateway
       const currentProposerTimestamp = Math.floor(Date.now() / 1000);
-      const currentEpoch = 0;
+      const currentEpoch = await getCurrentEpoch(config.gatewayBaseUrl);
 
       const result = await verifyRadixPayment(
         payload, requirements, config, replayStore,

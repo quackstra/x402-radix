@@ -106,6 +106,30 @@ function decompile_signed_partial_transaction(input_json) {
 exports.decompile_signed_partial_transaction = decompile_signed_partial_transaction;
 
 /**
+ * Compute the intent hash of a NotarizedTransactionV2 (hex-encoded SBOR).
+ * Returns the bech32m-encoded intent hash used for polling transaction status.
+ *
+ * Returns JSON: { success: bool, data?: intent_hash_bech32m, error?: string }
+ * @param {string} input_json
+ * @returns {string}
+ */
+function hash_notarized_transaction_v2(input_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(input_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.hash_notarized_transaction_v2(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+exports.hash_notarized_transaction_v2 = hash_notarized_transaction_v2;
+
+/**
  * Wrap a SignedPartialTransactionV2 (hex) in a root NotarizedTransactionV2.
  * Used by the facilitator to compose the final settlement transaction.
  *

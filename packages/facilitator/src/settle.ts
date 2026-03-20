@@ -1,5 +1,5 @@
 import { FacilitatorConfig, RadixPaymentRequirements, RadixSettlementResponse } from "@x402/radix-core";
-import { wrap_subintent_in_root_transaction } from "@x402/radix-wasm";
+import { wrap_subintent_in_root_transaction, hash_notarized_transaction_v2 } from "@x402/radix-wasm";
 import { GasBudgetTracker } from "./gas-budget.js";
 
 /**
@@ -55,7 +55,7 @@ export async function settleSponsored(
   }
 
   // Submit
-  const txId = await submitTransaction(config.gatewayBaseUrl, composedTxHex);
+  const txId = await submitTransaction(config.gatewayBaseUrl, composedTxHex, config.networkId);
   if (!txId) {
     return { success: false, network: config.network, errorReason: "Submission failed" };
   }
@@ -83,7 +83,7 @@ export async function settleNonSponsored(
     return { success: false, network: config.network, errorReason: `Preview: ${preview.error}` };
   }
 
-  const txId = await submitTransaction(config.gatewayBaseUrl, clientTxHex);
+  const txId = await submitTransaction(config.gatewayBaseUrl, clientTxHex, config.networkId);
   if (!txId) {
     return { success: false, network: config.network, errorReason: "Submission failed" };
   }
@@ -114,7 +114,7 @@ CALL_METHOD
 ;`.trim();
 }
 
-async function getCurrentEpoch(gatewayUrl: string): Promise<number> {
+export async function getCurrentEpoch(gatewayUrl: string): Promise<number> {
   try {
     const resp = await fetch(`${gatewayUrl}/status/gateway-status`, {
       method: "POST",
@@ -130,24 +130,76 @@ async function getCurrentEpoch(gatewayUrl: string): Promise<number> {
   throw new Error("Failed to fetch current epoch from Gateway");
 }
 
-async function previewTransaction(gatewayUrl: string, _txHex: string): Promise<{
+async function previewTransaction(gatewayUrl: string, txHex: string): Promise<{
   success: boolean; error?: string; feeCost?: string;
 }> {
-  // TODO: POST to /transaction/preview-v2
-  void gatewayUrl;
-  return { success: true, feeCost: "1.5" };
+  try {
+    const resp = await fetch(`${gatewayUrl}/transaction/preview`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        notarized_transaction_hex: txHex,
+        flags: {
+          use_free_credit: true,
+          assume_all_signature_proofs: false,
+          skip_epoch_check: false,
+        },
+      }),
+    });
+    const data = await resp.json() as Record<string, unknown>;
+    if (!resp.ok) {
+      return { success: false, error: (data.message as string) ?? "Preview request failed" };
+    }
+    const receipt = data.receipt as Record<string, unknown> | undefined;
+    if (!receipt || receipt.status !== "Succeeded") {
+      return { success: false, error: (receipt?.error_message as string) ?? "Preview receipt not Succeeded" };
+    }
+    const feeSummary = receipt.fee_summary as Record<string, string> | undefined;
+    const totalFee = feeSummary
+      ? String(
+          parseFloat(feeSummary.xrd_total_execution_cost ?? "0") +
+          parseFloat(feeSummary.xrd_total_finalization_cost ?? "0") +
+          parseFloat(feeSummary.xrd_total_storage_cost ?? "0") +
+          parseFloat(feeSummary.xrd_total_tipping_cost ?? "0") +
+          parseFloat(feeSummary.xrd_total_royalty_cost ?? "0")
+        )
+      : "1";
+    return { success: true, feeCost: totalFee };
+  } catch (e) {
+    return { success: false, error: `Preview fetch error: ${e}` };
+  }
 }
 
-async function submitTransaction(gatewayUrl: string, txHex: string): Promise<string | null> {
+async function submitTransaction(gatewayUrl: string, txHex: string, networkId: number): Promise<string | null> {
   try {
+    // Compute the bech32m intent hash via WASM before submitting
+    const hashResult = JSON.parse(
+      hash_notarized_transaction_v2(JSON.stringify({ tx_hex: txHex, network_id: networkId })),
+    ) as { success: boolean; data?: string; error?: string };
+
+    if (!hashResult.success || !hashResult.data) {
+      console.error(`[settle] Hash computation failed: ${hashResult.error}`);
+      return null;
+    }
+
+    const intentHash = hashResult.data;
+
     const resp = await fetch(`${gatewayUrl}/transaction/submit`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ notarized_transaction_hex: txHex }),
     });
-    if (!resp.ok) return null;
-    return `txid_placeholder_${Date.now()}`;
-  } catch { return null; }
+    if (!resp.ok) {
+      const data = await resp.json() as Record<string, unknown>;
+      console.error(`[settle] Submit failed: ${data.message ?? resp.status}`);
+      return null;
+    }
+
+    return intentHash;
+  } catch (e) {
+    console.error(`[settle] Submit error: ${e}`);
+    return null;
+  }
 }
 
 async function pollForConfirmation(gatewayUrl: string, txId: string, timeoutMs: number): Promise<boolean> {

@@ -88,6 +88,22 @@ pub fn wrap_subintent_in_root_transaction(input_json: &str) -> String {
     }
 }
 
+/// Compute the intent hash of a NotarizedTransactionV2 (hex-encoded SBOR).
+/// Returns the bech32m-encoded intent hash used for polling transaction status.
+///
+/// Returns JSON: { success: bool, data?: intent_hash_bech32m, error?: string }
+#[wasm_bindgen]
+pub fn hash_notarized_transaction_v2(input_json: &str) -> String {
+    let input: builder::DecompileInput = match serde_json::from_str(input_json) {
+        Ok(v) => v,
+        Err(e) => return WasmResult::err(format!("Invalid input JSON: {e}")),
+    };
+    match builder::hash_notarized_tx_v2(input) {
+        Ok(hash) => WasmResult::ok(hash),
+        Err(e) => WasmResult::err(format!("{e}")),
+    }
+}
+
 /// Decompile a SignedPartialTransactionV2 from hex and return its manifest string + header.
 /// Used by the server/facilitator for verification.
 ///
