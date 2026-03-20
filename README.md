@@ -36,11 +36,13 @@ pnpm dev:facilitator
 
 ## Status
 
-**Work in progress** — community contributions welcome!
+**Stokenet deployment ready** — community contributions welcome!
 
-Key areas needing work:
-- [ ] V2 subintent/transaction SBOR encoding (TS toolkit limitation)
-- [ ] Full signature verification
+- [x] V2 subintent/transaction SBOR encoding (custom Rust WASM builder)
+- [x] Real Radix Gateway integration (preview, submit, status polling)
+- [x] Bech32m intent hash computation via WASM
+- [ ] Full signature verification (currently trusts well-formed payloads)
+- [ ] Notary badge auto-derivation from private key
 - [ ] End-to-end Stokenet integration test
 - [ ] Upstream spec PR to coinbase/x402
 
