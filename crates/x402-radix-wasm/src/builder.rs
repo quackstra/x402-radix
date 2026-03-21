@@ -1,8 +1,10 @@
+use radix_common::address::AddressBech32Encoder;
 use radix_common::prelude::*;
 use radix_transactions::manifest::compile_manifest;
 use radix_transactions::manifest::MockBlobProvider;
 use radix_transactions::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::fmt::Write as FmtWrite;
 
 // ─── Input types ───
 
@@ -56,6 +58,19 @@ pub struct DecompiledOutput {
     pub end_epoch: u64,
     pub max_proposer_timestamp_secs: Option<i64>,
     pub min_proposer_timestamp_secs: Option<i64>,
+}
+
+#[derive(Deserialize)]
+pub struct DeriveInput {
+    pub private_key_hex: String,
+    pub network_id: u8,
+}
+
+#[derive(Serialize)]
+pub struct DeriveOutput {
+    pub account_address: String,
+    pub public_key_hex: String,
+    pub notary_badge: String,
 }
 
 // ─── Helpers ───
@@ -427,6 +442,41 @@ pub fn decompile_signed_partial_tx(input: DecompileInput) -> Result<String, Stri
     };
 
     serde_json::to_string(&output).map_err(|e| format!("Serialize output failed: {e}"))
+}
+
+/// Derive account address, public key, and notary badge from Ed25519 private key.
+pub fn derive_account_info(input: DeriveInput) -> Result<String, String> {
+    let private_key = parse_ed25519_private_key(&input.private_key_hex)?;
+    let public_key = private_key.public_key();
+    let nd = network_definition(input.network_id);
+    let address_encoder = AddressBech32Encoder::new(&nd);
+
+    // Derive virtual account address
+    let account_address =
+        ComponentAddress::preallocated_account_from_public_key(&public_key);
+    let account_bech32 = address_encoder
+        .encode(account_address.as_ref())
+        .map_err(|e| format!("Address encode failed: {e:?}"))?;
+
+    // Derive notary badge NonFungibleGlobalId
+    let nf_global_id = NonFungibleGlobalId::from_public_key(&public_key);
+    let display_context =
+        radix_common::address::AddressDisplayContext::with_encoder(&address_encoder);
+    let mut badge_str = String::new();
+    write!(
+        &mut badge_str,
+        "{}",
+        nf_global_id.display(display_context)
+    )
+    .map_err(|e| format!("Badge display failed: {e}"))?;
+
+    let output = DeriveOutput {
+        account_address: account_bech32,
+        public_key_hex: hex::encode(public_key.to_vec()),
+        notary_badge: badge_str,
+    };
+
+    serde_json::to_string(&output).map_err(|e| format!("Serialize failed: {e}"))
 }
 
 /// Decompile a NotarizedTransactionV2 from hex.

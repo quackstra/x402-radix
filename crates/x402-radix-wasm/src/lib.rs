@@ -135,3 +135,19 @@ pub fn decompile_notarized_transaction_v2(input_json: &str) -> String {
         Err(e) => WasmResult::err(format!("{e}")),
     }
 }
+
+/// Derive account address, public key, and notary badge from an Ed25519 private key.
+///
+/// Returns JSON: { success: bool, data?: derive_json, error?: string }
+/// where derive_json = { account_address, public_key_hex, notary_badge }
+#[wasm_bindgen]
+pub fn derive_account_info(input_json: &str) -> String {
+    let input: builder::DeriveInput = match serde_json::from_str(input_json) {
+        Ok(v) => v,
+        Err(e) => return WasmResult::err(format!("Invalid input JSON: {e}")),
+    };
+    match builder::derive_account_info(input) {
+        Ok(json) => WasmResult::ok(json),
+        Err(e) => WasmResult::err(format!("{e}")),
+    }
+}

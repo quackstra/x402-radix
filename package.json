@@ -9,6 +9,7 @@
     "clean": "pnpm -r clean",
     "dev:facilitator": "pnpm --filter @x402/radix-facilitator dev",
     "typecheck": "pnpm -r --filter '!@x402/radix-wasm' exec tsc --noEmit",
+    "keygen": "tsx scripts/keygen.ts",
     "test:e2e": "tsx scripts/e2e-stokenet.ts",
     "build:wasm": "cd crates/x402-radix-wasm && cargo build --target wasm32-unknown-unknown --release && wasm-bindgen --target nodejs --out-dir ../../packages/wasm/dist target/wasm32-unknown-unknown/release/x402_radix_wasm.wasm"
   },

@@ -43,6 +43,14 @@ export function decompile_notarized_transaction_v2(input_json: string): string;
 export function decompile_signed_partial_transaction(input_json: string): string;
 
 /**
+ * Derive account address, public key, and notary badge from an Ed25519 private key.
+ *
+ * Returns JSON: { success: bool, data?: derive_json, error?: string }
+ * where derive_json = { account_address, public_key_hex, notary_badge }
+ */
+export function derive_account_info(input_json: string): string;
+
+/**
  * Compute the intent hash of a NotarizedTransactionV2 (hex-encoded SBOR).
  * Returns the bech32m-encoded intent hash used for polling transaction status.
  *

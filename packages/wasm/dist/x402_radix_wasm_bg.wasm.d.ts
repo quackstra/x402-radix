@@ -5,6 +5,7 @@ export const build_notarized_transaction_v2: (a: number, b: number) => [number, 
 export const build_signed_partial_transaction: (a: number, b: number) => [number, number];
 export const decompile_notarized_transaction_v2: (a: number, b: number) => [number, number];
 export const decompile_signed_partial_transaction: (a: number, b: number) => [number, number];
+export const derive_account_info: (a: number, b: number) => [number, number];
 export const hash_notarized_transaction_v2: (a: number, b: number) => [number, number];
 export const wrap_subintent_in_root_transaction: (a: number, b: number) => [number, number];
 export const rustsecp256k1_v0_9_2_context_create: (a: number) => number;
